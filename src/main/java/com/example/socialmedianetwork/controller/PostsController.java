@@ -7,6 +7,7 @@ import com.example.socialmedianetwork.entity.User;
 import com.example.socialmedianetwork.exception.ResourceNotFoundException;
 import com.example.socialmedianetwork.repo.PostRepository;
 import com.example.socialmedianetwork.repo.UserRepository;
+import com.example.socialmedianetwork.service.PostsService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -30,103 +31,95 @@ public class PostsController {
     @Autowired
     PostRepository postRepository;
 
+    @Autowired
+    PostsService postsService;
 
     @SecurityRequirement(name = "bearer")
     @PostMapping("/posts/create")
-    public ResponseEntity createPost(@RequestBody PostRequest postRequest , HttpServletRequest request){
-        try {
-           // Optional<User> user = userRepository.findById(postRequest.getUserId());
-            Long userId = getUserIdFromToken(request);
+    public ResponseEntity<Void> createPost(@RequestBody PostRequest postRequest , HttpServletRequest request){
+        return postsService.createPost(postRequest,request);
 
-            Optional<User> user = userRepository.findById(userId);
-            user.ifPresent((u) -> {
-                PostContent postContent = new PostContent();
-                postContent.setContent(postRequest.getContent());
-                postContent.setTitle(postRequest.getTitle());
-                postContent.setUser(u);
-                postContent.setLikes(0);
-                postRepository.save(postContent);
-            });
-            return ResponseEntity.ok().build();
-        }catch (Exception e){
-            return ResponseEntity.ok(e.getMessage());
-        }
+//        try {
+//           // Optional<User> user = userRepository.findById(postRequest.getUserId());
+//            Long userId = getUserIdFromToken(request);
 //
-//        User user = postContent.getUser();
-//        user.getPosts().add(postContent);
-//        postContent.setUser(user);
-//        return this.postRepository.save(postContent);
+//            Optional<User> user = userRepository.findById(userId);
+//            user.ifPresent((u) -> {
+//                PostContent postContent = new PostContent();
+//                postContent.setContent(postRequest.getContent());
+//                postContent.setTitle(postRequest.getTitle());
+//                postContent.setUser(u);
+//                postContent.setLikes(0);
+//                postRepository.save(postContent);
+//            });
+//            return ResponseEntity.ok().build();
+//        }catch (Exception e){
+//            return ResponseEntity.ok(e.getMessage());
+//        }
+
     }
 
     @SecurityRequirement(name = "bearer")
     @GetMapping("/posts/{postId}")
-    public PostContent getParticularPost(@PathVariable(value = "postId") long postId){
-        PostContent postContent = postRepository.findById(postId).get();
-        return postContent;
+    public ResponseEntity<PostContent> getParticularPost(@PathVariable(value = "postId") long postId){
+        PostContent postContent = postsService.getParticularPost(postId);
+        if(postContent!=null){
+            return ResponseEntity.ok(postContent);
+        }else{
+            return ResponseEntity.notFound().build();
+        }
     }
+
 
     @SecurityRequirement(name = "bearer")
     @PutMapping("/posts/{postId}")
-    public PostContent updatePostContent(@RequestBody PostContent postContent , @PathVariable(value = "postId") long postId){
-        PostContent postContentExisting = this.postRepository.findById(postId).orElse(null);
-
-        postContentExisting.setTitle(postContent.getTitle());
-        postContentExisting.setContent(postContent.getContent());
-        return this.postRepository.save(postContentExisting);
+    public ResponseEntity<PostContent> updatePostContent(@RequestBody PostContent postContent , @PathVariable(value = "postId") long postId){
+        try {
+            PostContent updatedPost = postsService.updatePostContent(postContent , postId);
+            return ResponseEntity.ok(updatedPost);
+        }catch (RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
     }
 
 
     @SecurityRequirement(name = "bearer")
     @DeleteMapping("posts/delete/{postId}")
-    public ResponseEntity<PostContent> deleteParticularPostContent(@PathVariable(value = "postId") long postId){
-        Optional<PostContent> postContent = postRepository.findById(postId);
-        postContent.ifPresent((p) -> {
-            Optional<User> user = userRepository.findById(p.getUser().getId());
-            user.ifPresent((u) -> {
-                u.getPosts().remove(p);
-                userRepository.save(u);
-            });
-        });
+    public ResponseEntity<Void> deleteParticularPostContent(@PathVariable(value = "postId") long postId){
+        postsService.deleteParticularPostContent(postId);
         return ResponseEntity.ok().build();
-//        if(postContentExisting.isPresent()){
-//            this.postRepository.deleteById(postContentExisting.get().getId());
-//            return "Deleted Successfully..";
-//        }else {
-//            return "post not found";
-//        }
     }
 
 
     @SecurityRequirement(name = "bearer")
     @PostMapping("/posts/{postId}/like")
-    public void likePost(@PathVariable(value = "postId") long postId){
-        PostContent postContent = postRepository.findById(postId)
-                .orElseThrow(()-> new ResourceNotFoundException("Post not found with id:"+ postId));
-
-        postContent.setLikes(postContent.getLikes()+1);
-        postRepository.save(postContent);
+    public ResponseEntity<Void> likePost(@PathVariable(value = "postId") long postId){
+      try {
+          postsService.likePost(postId);
+          return ResponseEntity.ok().build();
+      }catch (ResourceNotFoundException e){
+          return ResponseEntity.notFound().build();
+      }
     }
 
     @SecurityRequirement(name = "bearer")
     @DeleteMapping("/posts/{postId}/like")
-    public void unLikePost(@PathVariable(value = "postId") long postId){
-        PostContent postContent = postRepository.findById(postId).orElseThrow(()->new ResourceNotFoundException("Post Not Found"+postId));
-
-        int newlikes = postContent.getLikes()-1;
-        if(newlikes<0){
-            postContent.setLikes(0);
-        }else {
-            postContent.setLikes(newlikes);
+    public ResponseEntity<Void> unLikePost(@PathVariable(value = "postId") long postId){
+        try {
+            postsService.unLikePost(postId);
+            return ResponseEntity.ok().build();
+        }catch (ResourceNotFoundException e){
+            return ResponseEntity.notFound().build();
         }
-        postRepository.save(postContent);
     }
 
 
 
     @SecurityRequirement(name = "bearer")
     @GetMapping("/trending")
-    public List<PostContent> getTrendingPosts(){
-        return postRepository.findTrendingPosts();
+    public ResponseEntity<List<PostContent>> getTrendingPosts(){
+        List<PostContent> trendingPosts = postsService.getTrendingPosts();
+        return ResponseEntity.ok(trendingPosts);
     }
 
 

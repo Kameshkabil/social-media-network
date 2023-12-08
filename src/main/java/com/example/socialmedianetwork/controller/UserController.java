@@ -6,6 +6,7 @@ import com.example.socialmedianetwork.entity.JwtResponse;
 import com.example.socialmedianetwork.entity.User;
 import com.example.socialmedianetwork.entity.UserLoginRequest;
 import com.example.socialmedianetwork.repo.UserRepository;
+import com.example.socialmedianetwork.service.UserService;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -34,39 +35,36 @@ public class UserController {
     @Autowired
     AuthenticationProvider authenticationProvider;
 
+    @Autowired
+    UserService userService;
+
     @PostMapping("/signup")
-    public User createNewUserAccount(@RequestBody UserSignUp userSignUp){
-//        User user1 = new User();
-//        user1.setUsername(user.getUsername());
-//        user1.setEmail(user.getEmail());
-//        user1.setPassword(passwordEncoder.encode(user.getPassword()));
-//        user1.setMobileNumber(user.getMobileNumber());
-//        user1.setLocation(user.getLocation());
-//        user1.setCreatedAt(user.getCreatedAt());
-//        user1.setUpdatedAt(user.getUpdatedAt());
-//        return this.userRepository.save(user1);
-        User user = new User();
-        user.setUsername(userSignUp.getUsername());
-        user.setEmail(userSignUp.getEmail());
-        user.setPassword(user.getPassword());
-        user.setMobileNumber(userSignUp.getMobileNumber());
-        user.setPassword(passwordEncoder.encode(userSignUp.getPassword()));
-        user.setLocation(userSignUp.getLocation());
-        return this.userRepository.save(user);
+    public ResponseEntity<String> createNewUserAccount(@RequestBody UserSignUp userSignUp){
+
+        User newUser = userService.createNewUserAccount(userSignUp);
+        return ResponseEntity.ok("User account created successfully");
     }
 
 
     @SecurityRequirement(name = "bearer")
     @GetMapping("/users/{userId}")
     public ResponseEntity<Object> getPaticularUserProfileInformation(@PathVariable(value= "userId") long userId){
-        Optional<User> user = userRepository.findById(userId);
-        User response = null;
+//        Optional<User> user = userRepository.findById(userId);
+//        User response = null;
+//        if(user.isPresent()){
+//            System.out.println(user.get().getEmail());
+//            response = user.get();
+//        }
+//        return ResponseEntity.ok(user.get());
+////        return ResponseEntity.ok(userId);
+
+        Optional<User> user = userService.getUserById(userId);
         if(user.isPresent()){
-            System.out.println(user.get().getEmail());
-            response = user.get();
+            System.out.println(user.get().getUsername());
+            return ResponseEntity.ok(user.get());
+        }else{
+            return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(user.get());
-//        return ResponseEntity.ok(userId);
     }
 
 
@@ -89,16 +87,13 @@ public class UserController {
 
     @SecurityRequirement(name = "bearer")
     @PutMapping("/users/{userId}")
-    public User updateUserProfileDetail(@RequestBody User user , @PathVariable(value ="userId") long userId){
-        User userExisting = this.userRepository.findById(userId).orElse(null);
-
-        userExisting.setUsername(user.getUsername());
-        userExisting.setEmail(user.getEmail());
-        userExisting.setPassword(user.getPassword());
-        userExisting.setMobileNumber(user.getMobileNumber());
-        userExisting.setLocation(user.getLocation());
-        return this.userRepository.save(userExisting);
-
+    public ResponseEntity<User> updateUserProfileDetail(@RequestBody User user , @PathVariable(value ="userId") long userId){
+        try{
+            User updateUserProfile = userService.updateUserProfileDetail(user , userId);
+            return ResponseEntity.ok(updateUserProfile);
+        }catch (RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
     }
 
 

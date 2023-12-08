@@ -7,6 +7,7 @@ import com.example.socialmedianetwork.entity.User;
 import com.example.socialmedianetwork.exception.ResourceNotFoundException;
 import com.example.socialmedianetwork.repo.MessageRepository;
 import com.example.socialmedianetwork.repo.UserRepository;
+import com.example.socialmedianetwork.service.MessageService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -30,6 +31,8 @@ public class MessageController {
         this.userRepository = userRepository;
         this.messageRepository = messageRepository;
     }
+    @Autowired
+    MessageService messageService;
 
 
 //    @SecurityRequirement(name = "bearer")
@@ -54,22 +57,8 @@ public class MessageController {
     @SecurityRequirement(name = "bearer")
     @PostMapping("/send")
     public ResponseEntity<Void> sendDirectMessage(@RequestBody SendMessageDto sendMessageDto , HttpServletRequest request){
-        Long senderId = getUserIdFromToken(request);
-
-        User sender = userRepository.findById(senderId)
-               .orElseThrow(()->new ResourceNotFoundException("Sender not found"));
-        User receiver = userRepository.findById(sendMessageDto.getReceiverId())
-               .orElseThrow(()->new ResourceNotFoundException("Receiver not Found"));
-
-        Message message = new Message();
-        message.setSender(sender);
-        message.setReceiver(receiver);
-        message.setContent(sendMessageDto.getContent());
-
-        messageRepository.save(message);
-
+        messageService.sendDirectMessage(sendMessageDto , request);
         return ResponseEntity.ok().build();
-
     }
 
 //    @GetMapping("/{conversationId}")
@@ -90,20 +79,8 @@ public class MessageController {
     @SecurityRequirement(name = "bearer")
     @GetMapping("/{conversationId}")
     public ResponseEntity<List<SendMessageRequest>> getMessagesConversation(@PathVariable(value = "conversationId") long conversationId){
-        try {
-            List<Message> messages = messageRepository.findBySender_IdOrReceiver_Id(conversationId, conversationId);
-
-            List<SendMessageRequest> messageDTOs = messages.stream()
-                    .map(message -> new SendMessageRequest( message.getContent(),
-                            message.getSender().getId(),
-                            message.getReceiver().getId()))
-                    .collect(Collectors.toList());
-
-            return ResponseEntity.ok(messageDTOs);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        List<SendMessageRequest> messageRequests = messageService.getMessagesConversation(conversationId);
+        return ResponseEntity.ok(messageRequests);
     }
 //
 //    @SecurityRequirement(name = "bearer")

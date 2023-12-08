@@ -1,6 +1,7 @@
 package com.example.socialmedianetwork.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
@@ -17,6 +18,8 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
     private String username;
+
+    @JsonIgnore
     private String password;
     private String email;
     private String mobileNumber;
