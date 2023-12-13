@@ -73,7 +73,7 @@ public class FriendService {
 
     public List<FriendDto> getFriendsList(long userId) {
         try {
-            List<Friend> friends = friendRepository.findBySender_IdOrReceiver_IdAndStatus(userId, userId, Friend.FriendStatus.ACCEPTED);
+            List<Friend> friends =  friendRepository.findBySender_IdOrReceiver_IdAndStatus(userId, userId, Friend.FriendStatus.ACCEPTED);
 
             return friends.stream()
                     .map(friend -> new FriendDto(/*friend.getSender().getId(),*/ friend.getReceiver().getId()))
